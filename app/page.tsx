@@ -8,6 +8,7 @@ type ActivityData = {
   subType?: string; // e.g. "Running", "Coding Language"
   duration?: number;
   metricValue?: number; // Replaces calories
+  steps?: number; // Only for Walking
   notes?: string;
 };
 
@@ -169,8 +170,8 @@ export default function StreakX() {
   };
 
   const totalFocusTime = days.reduce((sum, day) => sum + (day?.type !== 'Workout' ? (day?.duration || 0) : 0), 0);
-  const totalCalories = days.reduce((sum, day) => sum + (day?.type === 'Workout' && day?.subType !== 'Walking' ? (day?.metricValue || (day as any)?.calories || 0) : 0), 0);
-  const totalSteps = days.reduce((sum, day) => sum + (day?.type === 'Workout' && day?.subType === 'Walking' ? (day?.metricValue || 0) : 0), 0);
+  const totalCalories = days.reduce((sum, day) => sum + (day?.type === 'Workout' ? (day?.metricValue || (day as any)?.calories || 0) : 0), 0);
+  const totalSteps = days.reduce((sum, day) => sum + (day?.type === 'Workout' && day?.subType === 'Walking' ? (day?.steps || 0) : 0), 0);
   const totalDuration = days.reduce((sum, day) => sum + (day?.duration || 0), 0);
   
   const getCalendarDays = () => {
@@ -455,7 +456,9 @@ export default function StreakX() {
                     
                     {day.completed && days[day.index] && (
                        <div className="text-[10px] sm:text-xs font-semibold text-orange-100 opacity-90 mt-0.5 sm:mt-1 truncate w-full px-1 text-center">
-                         {days[day.index]?.metricValue ? `${days[day.index]?.metricValue} pts` : days[day.index]?.type}
+                         {days[day.index]?.subType === 'Walking' && days[day.index]?.steps 
+                             ? `${(days[day.index]?.steps || 0) > 9999 ? ((days[day.index]?.steps || 0)/1000).toFixed(1) + 'k' : days[day.index]?.steps} steps`
+                             : days[day.index]?.metricValue ? `${days[day.index]?.metricValue} pts` : days[day.index]?.type}
                        </div>
                     )}
 
@@ -576,7 +579,8 @@ export default function StreakX() {
                            type: newType,
                            // Reset specific fields when switching type to avoid bad data
                            metricValue: newType === 'Workout' ? 300 : undefined,
-                           subType: newType === 'Workout' ? 'Running' : undefined
+                           subType: newType === 'Workout' ? 'Running' : undefined,
+                           steps: newType === 'Workout' && activityForm.subType === 'Walking' ? 2000 : undefined
                          })
                       }}
                       className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 outline-none transition-all appearance-none"
@@ -598,7 +602,14 @@ export default function StreakX() {
                       <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Exercise</label>
                       <select 
                         value={activityForm.subType || 'Running'}
-                        onChange={(e) => setActivityForm({...activityForm, subType: e.target.value})}
+                        onChange={(e) => {
+                           const newSubType = e.target.value;
+                           setActivityForm({
+                              ...activityForm, 
+                              subType: newSubType,
+                              steps: newSubType === 'Walking' ? 2000 : undefined
+                           })
+                        }}
                         className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 outline-none transition-all appearance-none"
                       >
                         <option value="Running">Running</option>
@@ -613,41 +624,78 @@ export default function StreakX() {
                   )}
                 </div>
                 
-                <div className={`grid gap-4 ${activityForm.type === 'Workout' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Duration</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
-                        <Clock size={16} />
-                      </div>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={activityForm.duration || ''}
-                        onChange={(e) => setActivityForm({...activityForm, duration: parseInt(e.target.value) || 0})}
-                        className="w-full pl-10 pr-3 border border-zinc-800 rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 bg-zinc-950 text-white outline-none transition-all placeholder-zinc-700"
-                        placeholder="Mins"
-                      />
+                <div className="space-y-6">
+                  {/* Duration Slider */}
+                  <div className="bg-zinc-950/40 p-4 border border-zinc-800/80 rounded-2xl">
+                    <div className="flex justify-between items-center pl-1 mb-3">
+                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center">
+                         <Clock size={14} className="mr-1.5 text-zinc-500" /> Duration
+                      </label>
+                      <span className="text-2xl font-bold text-white bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-xl min-w-[3.5rem] text-center shadow-inner">
+                         {activityForm.duration || 0}<span className="text-xs text-zinc-500 ml-1">min</span>
+                      </span>
                     </div>
+                    <input 
+                      type="range" 
+                      min="0"
+                      max="180"
+                      step="5"
+                      value={activityForm.duration || 0}
+                      onChange={(e) => setActivityForm({...activityForm, duration: parseInt(e.target.value) || 0})}
+                      className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-300 hover:accent-zinc-100 transition-all"
+                    />
                   </div>
                   
+                  {/* Calories Slider */}
                   {activityForm.type === 'Workout' && (
-                    <div className="animate-fade-in">
-                      <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">
-                        {activityForm.subType === 'Walking' ? 'Steps' : 'Calories Burned'}
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-orange-500">
-                          {activityForm.subType === 'Walking' ? <Footprints size={16} /> : <Flame size={16} />}
-                        </div>
-                        <input 
-                          type="number" 
-                          min="0"
-                          value={activityForm.metricValue || ''}
-                          onChange={(e) => setActivityForm({...activityForm, metricValue: parseInt(e.target.value) || 0})}
-                          className="w-full pl-10 pr-3 border border-zinc-800 rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 bg-zinc-950 text-white outline-none transition-all placeholder-zinc-700"
-                          placeholder={activityForm.subType === 'Walking' ? 'Steps' : 'Kcal'}
-                        />
+                    <div className="bg-zinc-950/40 p-4 border border-zinc-800/80 rounded-2xl animate-fade-in relative overflow-hidden group">
+                      <div className="absolute -right-10 -top-10 w-24 h-24 bg-orange-500/10 blur-2xl group-hover:bg-orange-500/20 transition-all z-0 pointer-events-none" />
+                      <div className="relative z-10 flex justify-between items-center pl-1 mb-3">
+                        <label className="text-xs font-bold text-orange-400 uppercase tracking-widest flex items-center">
+                           <Flame size={14} className="mr-1.5 text-orange-500" /> Calories Burned
+                        </label>
+                        <span className="text-2xl font-bold text-orange-400 bg-orange-950/30 border border-orange-500/20 px-3 py-1 rounded-xl min-w-[3.5rem] text-center shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+                           {activityForm.metricValue || 0}<span className="text-xs text-orange-500/70 ml-1">kcal</span>
+                        </span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0"
+                        max="2000"
+                        step="10"
+                        value={activityForm.metricValue || 0}
+                        onChange={(e) => setActivityForm({...activityForm, metricValue: parseInt(e.target.value) || 0})}
+                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500 relative z-10 hover:accent-orange-400 transition-all drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]"
+                      />
+                    </div>
+                  )}
+
+                  {/* Steps Slider - Only for Walking */}
+                  {activityForm.type === 'Workout' && activityForm.subType === 'Walking' && (
+                    <div className="bg-zinc-950/40 p-4 border border-zinc-800/80 rounded-2xl animate-fade-in relative overflow-hidden group">
+                      <div className="absolute -right-10 -top-10 w-24 h-24 bg-teal-500/10 blur-2xl group-hover:bg-teal-500/20 transition-all z-0 pointer-events-none" />
+                      <div className="relative z-10 flex justify-between items-center pl-1 mb-3">
+                        <label className="text-xs font-bold text-teal-400 uppercase tracking-widest flex items-center">
+                           <Footprints size={14} className="mr-1.5 text-teal-500" /> Steps
+                        </label>
+                        <span className="text-2xl font-bold text-teal-400 bg-teal-950/30 border border-teal-500/20 px-3 py-1 rounded-xl min-w-[3.5rem] text-center shadow-[0_0_15px_rgba(20,184,166,0.1)]">
+                           {(activityForm.steps || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0"
+                        max="30000"
+                        step="100"
+                        value={activityForm.steps || 0}
+                        onChange={(e) => setActivityForm({...activityForm, steps: parseInt(e.target.value) || 0})}
+                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-teal-500 relative z-10 hover:accent-teal-400 transition-all drop-shadow-[0_0_8px_rgba(20,184,166,0.5)]"
+                      />
+                      <div className="flex justify-between text-[10px] text-zinc-600 font-bold mt-2 px-1 relative z-10">
+                         <span>0</span>
+                         <span>10k</span>
+                         <span>20k</span>
+                         <span>30k+</span>
                       </div>
                     </div>
                   )}
