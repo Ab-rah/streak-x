@@ -466,7 +466,7 @@ export default function StreakX() {
                     </span>
 
                     {day.completed && days[day.index] && (
-                      <div className="text-[10px] sm:text-xs font-semibold text-orange-100 opacity-90 mt-0.5 sm:mt-1 truncate w-full px-1 text-center">
+                      <div className="text-[10px] sm:text-xs font-semibold text-orange-100 opacity-90 mt-0.5 sm:mt-1 truncate w-full px-1 text-center hidden sm:block">
                         {days[day.index]?.subType === 'Walking' && days[day.index]?.steps
                           ? `${(days[day.index]?.steps || 0) > 9999 ? ((days[day.index]?.steps || 0) / 1000).toFixed(1) + 'k' : days[day.index]?.steps} steps`
                           : days[day.index]?.metricValue ? `${days[day.index]?.metricValue} pts` : days[day.index]?.type}
@@ -480,7 +480,7 @@ export default function StreakX() {
                     )}
 
                     {day.completed && (
-                      <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2">
+                      <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
                         <CheckCircle className="text-white w-3 h-3 sm:w-4 sm:h-4 drop-shadow-md" />
                       </div>
                     )}
