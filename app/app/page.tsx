@@ -206,21 +206,25 @@ export default function StreakX() {
 
   if (!currentUser) {
     return (
-      <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 items-center justify-center p-4 relative overflow-hidden">
+      <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 items-center justify-center p-4 relative">
         {/* Glow blobs for background aesthetics */}
-        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-orange-600/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-orange-600/10 rounded-full blur-[120px] mix-blend-screen" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] mix-blend-screen" />
+        </div>
 
         <div className="bg-zinc-900/60 backdrop-blur-2xl border border-zinc-800/50 rounded-3xl shadow-2xl p-8 w-full max-w-md relative z-10 animate-fade-in">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-red-500 to-indigo-500"></div>
 
-          <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 bg-zinc-800/80 rounded-2xl flex items-center justify-center border border-zinc-700/50 shadow-inner">
-              <Calendar className="text-orange-500 w-10 h-10 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+          <div className="flex justify-center mb-8 hover:scale-105 transition-transform duration-300">
+            <div className="w-20 h-20 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-3xl flex items-center justify-center border border-zinc-700/60 shadow-[0_0_30px_rgba(249,115,22,0.3)]">
+              <Activity className="text-orange-500 w-10 h-10 drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
             </div>
           </div>
 
-          <h1 className="text-4xl font-bold text-center mb-3 text-white tracking-tight">StreakX</h1>
+          <h1 className="text-4xl font-black tracking-tighter text-center mb-3 text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 drop-shadow-sm">
+            Strea<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">X</span>
+          </h1>
           <p className="text-zinc-400 text-center mb-10 text-sm">Log in to track your 100-day journey.</p>
 
           <form onSubmit={handleLogin} className="space-y-6">
@@ -285,13 +289,20 @@ export default function StreakX() {
 
       {/* Header */}
       <header className="bg-zinc-900/60 backdrop-blur-xl border-b border-zinc-800/60 py-4 px-6 z-30 sticky top-0">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-              <Calendar className="text-white w-5 h-5" />
+        <div className="max-w-5xl mx-auto flex justify-between items-center relative">
+          
+          {/* Spacer to keep flex balance since logo is absolute on desktop */}
+          <div className="hidden sm:block w-[50px] pointer-events-none invisible"></div>
+
+          <div className="sm:absolute sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 flex items-center space-x-3 hover:scale-105 transition-transform duration-300">
+            <div className="w-10 h-10 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl flex items-center justify-center border border-zinc-700/60 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+              <Activity className="text-orange-500 w-5 h-5 drop-shadow-[0_0_10px_rgba(249,115,22,0.8)]" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white hidden sm:block">StreakX</h1>
+            <span className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 drop-shadow-sm hidden sm:block">
+              Strea<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">X</span>
+            </span>
           </div>
+
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="flex items-center space-x-2 text-sm text-zinc-300 bg-zinc-800/50 px-4 py-2 rounded-full border border-zinc-700/50 backdrop-blur-md">
               <User size={16} className="text-emerald-400" />
