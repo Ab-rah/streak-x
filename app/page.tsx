@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, ArrowLeft, ArrowRight, Info, Award, User, LogOut, Activity, Clock, Flame, X } from 'lucide-react';
+import { Calendar, CheckCircle, ArrowLeft, ArrowRight, Info, Award, User, LogOut, Activity, Clock, Flame, X, Loader2, Target } from 'lucide-react';
 
 type WorkoutData = {
   completed: boolean;
@@ -11,8 +11,9 @@ type WorkoutData = {
 };
 
 export default function StreakX() {
-  const [days, setDays] = useState<(WorkoutData | null)[]>(Array(100).fill(null));
+  const [days, setDays] = useState<(WorkoutData | null)[]>([]);
   const [currentView, setCurrentView] = useState(0);
+  const [targetDays, setTargetDays] = useState(100);
   const [showInfo, setShowInfo] = useState(false);
   const [animation, setAnimation] = useState('');
   
@@ -23,28 +24,30 @@ export default function StreakX() {
   
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [usernameInput, setUsernameInput] = useState('');
+  const [targetDaysInput, setTargetDaysInput] = useState('100');
   const [isClient, setIsClient] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const daysPerView = 28; // 4 rows of 7 days for calendar view
 
-  const loadUserDays = (username: string) => {
-    const savedDays = localStorage.getItem(`streakXDays_${username}`);
-    if (savedDays) {
-      try {
-        const parsed = JSON.parse(savedDays);
-        // Migration logic: if old boolean array, convert to explicit object
-        const migrated = parsed.map((item: any) => {
-           if (typeof item === 'boolean') {
-              return item ? { completed: true, type: 'Legacy Workout', duration: 0, calories: 0 } : null;
-           }
-           return item;
-        });
-        setDays(migrated);
-      } catch (e) {
-        setDays(Array(100).fill(null));
+  const loadUserDays = async (username: string) => {
+    setIsSaving(true);
+    try {
+      const storedData = localStorage.getItem(`streakX_user_${username}`);
+      if (storedData) {
+         const userData = JSON.parse(storedData);
+         setTargetDays(userData.targetDays);
+         setDays(userData.days);
+      } else {
+         // Create default empty profile in UI, will be saved on first action
+         const defaultTarget = parseInt(targetDaysInput) || 100;
+         setTargetDays(defaultTarget);
+         setDays(Array(defaultTarget).fill(null));
       }
-    } else {
-      setDays(Array(100).fill(null)); // Reset if new
+    } catch (e) {
+      console.error("Error loading profile", e);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -54,15 +57,16 @@ export default function StreakX() {
       const name = usernameInput.trim();
       setCurrentUser(name);
       localStorage.setItem('streakXCurrentUser', name);
-      loadUserDays(name);
+      loadUserDays(name); // Load fresh from server
     }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('streakXCurrentUser');
-    setDays(Array(100).fill(null));
+    setDays([]);
     setUsernameInput('');
+    setTargetDays(100);
     setCurrentView(0);
   };
   
@@ -79,42 +83,54 @@ export default function StreakX() {
 
   const saveWorkout = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedDayIndex === null) return;
+    if (selectedDayIndex === null || !currentUser) return;
 
     const newDays = [...days];
     const isNewCompletion = !newDays[selectedDayIndex]?.completed;
     
     newDays[selectedDayIndex] = { ...workoutForm, completed: true };
     setDays(newDays);
+    setIsModalOpen(false);
     
     if (isNewCompletion) {
       setAnimation('celebration');
       setTimeout(() => setAnimation(''), 1500);
     }
     
-    if (currentUser) {
-      localStorage.setItem(`streakXDays_${currentUser}`, JSON.stringify(newDays));
+    setIsSaving(true);
+    try {
+       localStorage.setItem(`streakX_user_${currentUser}`, JSON.stringify({ targetDays, days: newDays }));
+    } catch (e) {
+       console.error("Error saving data", e);
+    } finally {
+       setIsSaving(false);
     }
-    
-    setIsModalOpen(false);
   };
 
   const toggleDayStatus = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // don't trigger modal
+    e.stopPropagation(); 
+    if (!currentUser) return;
+    
     const newDays = [...days];
     const isCurrentlyCompleted = !!newDays[index]?.completed;
     
     if (isCurrentlyCompleted) {
        newDays[index] = null; // Uncheck
     } else {
-       newDays[index] = { completed: true, type: 'Quick Workout', duration: 15, calories: 100 }; // Quick check
+       newDays[index] = { completed: true, type: 'Quick Workout', duration: 15, calories: 100 };
        setAnimation('celebration');
        setTimeout(() => setAnimation(''), 1500);
     }
     
     setDays(newDays);
-    if (currentUser) {
-      localStorage.setItem(`streakXDays_${currentUser}`, JSON.stringify(newDays));
+    
+    setIsSaving(true);
+    try {
+       localStorage.setItem(`streakX_user_${currentUser}`, JSON.stringify({ targetDays, days: newDays }));
+    } catch (e) {
+       console.error("Error saving data", e);
+    } finally {
+       setIsSaving(false);
     }
   };
   
@@ -135,7 +151,7 @@ export default function StreakX() {
   };
   
   const handleNext = () => {
-    if (currentView < Math.ceil(100 / daysPerView) - 1) {
+    if (currentView < Math.ceil(targetDays / daysPerView) - 1) {
       setCurrentView(currentView + 1);
     }
   };
@@ -155,10 +171,7 @@ export default function StreakX() {
   // Calculate calendar layout
   const getCalendarDays = () => {
     const result = [];
-    // Calculate which day of week the period starts (0-6, with 0 = Sunday)
-    // For simplicity, we'll assume the first day of each period starts on a specific weekday
-    // This can be adjusted as needed
-    const startOffset = (currentView * 4) % 7; // 4 is the number of weeks per view
+    const startOffset = (currentView * 4) % 7; 
     
     // Add empty placeholders at the beginning
     for (let i = 0; i < startOffset; i++) {
@@ -170,7 +183,7 @@ export default function StreakX() {
       result.push({ 
         isEmpty: false, 
         dayNumber: i + 1,
-        completed: days[i],
+        completed: !!days[i]?.completed,
         index: i
       });
     }
@@ -178,11 +191,13 @@ export default function StreakX() {
     return result;
   };
   
-  const maxViewIndex = Math.ceil(100 / daysPerView) - 1;
+  const maxViewIndex = Math.ceil(targetDays / daysPerView) - 1;
   const startDay = currentView * daysPerView;
-  const endDay = Math.min(startDay + daysPerView, 100);
+  const endDay = Math.min(startDay + daysPerView, targetDays);
   const completedDaysCount = days.filter(day => day?.completed).length;
-  const progressPercentage = (completedDaysCount / 100) * 100;
+  // Ensure we don't divide by zero
+  const safeTargetDays = targetDays > 0 ? targetDays : 1;
+  const progressPercentage = (completedDaysCount / safeTargetDays) * 100;
   const calendarDays = getCalendarDays();
   
   if (!isClient) return null; // Avoid hydration mismatch
@@ -198,7 +213,7 @@ export default function StreakX() {
              </div>
           </div>
           <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">Welcome to StreaX</h1>
-          <p className="text-gray-500 text-center mb-8">Enter your name to start tracking your 100-day consistency challenge.</p>
+          <p className="text-gray-500 text-center mb-8">Enter your profile to start tracking your consistency journey.</p>
           
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -219,11 +234,35 @@ export default function StreakX() {
                 />
               </div>
             </div>
+            
+            <div>
+              <label htmlFor="targetDays" className="block text-sm font-medium text-gray-700 mb-1">Target Days (for new profiles)</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Target size={18} className="text-gray-400" />
+                </div>
+                <input
+                  type="number"
+                  id="targetDays"
+                  name="targetDays"
+                  min="1"
+                  max="1000"
+                  value={targetDaysInput}
+                  onChange={(e) => setTargetDaysInput(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow outline-none"
+                  placeholder="100"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Existing users will load their saved target.</p>
+            </div>
+
             <button 
               type="submit"
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all hover:shadow-md transform hover:-translate-y-0.5"
+              disabled={isSaving}
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all hover:shadow-md transform hover:-translate-y-0.5 disabled:opacity-75 disabled:cursor-not-allowed"
             >
-              Get Started
+              {isSaving ? <Loader2 size={24} className="animate-spin" /> : "Get Started"}
             </button>
           </form>
         </div>
@@ -244,6 +283,7 @@ export default function StreakX() {
             <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
                <User size={16} className="text-indigo-500" />
                <span className="font-medium">{currentUser}</span>
+               {isSaving && <Loader2 size={12} className="text-indigo-500 animate-spin ml-1" />}
             </div>
             <button 
               onClick={() => setShowInfo(!showInfo)}
@@ -288,9 +328,12 @@ export default function StreakX() {
                 <p className="text-sm font-medium text-indigo-800 mb-1 flex items-center"><Activity size={16} className="mr-1"/> Streak</p>
                 <p className="text-3xl font-bold text-indigo-700">{currentStreak()}</p>
               </div>
-              <div className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow-sm border border-indigo-100">
+              <div className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow-sm border border-indigo-100 relative">
                 <p className="text-sm font-medium text-indigo-800 mb-1 flex items-center"><CheckCircle size={16} className="mr-1"/> Days</p>
-                <p className="text-3xl font-bold text-indigo-700">{completedDaysCount}</p>
+                <div className="flex items-baseline space-x-1">
+                   <p className="text-3xl font-bold text-indigo-700">{completedDaysCount}</p>
+                   <p className="text-sm font-bold text-indigo-400">/ {targetDays}</p>
+                </div>
               </div>
               <div className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-lg shadow-sm border border-orange-100">
                 <p className="text-sm font-medium text-orange-800 mb-1 flex items-center"><Flame size={16} className="mr-1"/> Calories</p>
@@ -439,10 +482,19 @@ export default function StreakX() {
                   </div>
                 )}
 
-                {completedDaysCount >= 100 && (
-                  <div className={`flex flex-col items-center p-4 rounded-xl shadow-sm border ${completedDaysCount >= 100 ? 'bg-gradient-to-b from-white to-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 shadow-inner ${completedDaysCount >= 100 ? 'bg-gradient-to-br from-purple-500 to-fuchsia-600' : 'bg-gray-200'}`}>
-                      <span className="text-white font-bold text-xl">100</span>
+                {completedDaysCount >= Math.floor(targetDays / 2) && targetDays >= 10 && (
+                  <div className={`flex flex-col items-center p-4 rounded-xl shadow-sm border ${completedDaysCount >= Math.floor(targetDays / 2) ? 'bg-gradient-to-b from-white to-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 shadow-inner ${completedDaysCount >= Math.floor(targetDays / 2) ? 'bg-gradient-to-br from-emerald-400 to-green-500' : 'bg-gray-200'}`}>
+                      <span className="text-white font-bold text-xl">50%</span>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 text-center">Halfway</span>
+                  </div>
+                )}
+
+                {completedDaysCount >= targetDays && (
+                  <div className={`flex flex-col items-center p-4 rounded-xl shadow-sm border ${completedDaysCount >= targetDays ? 'bg-gradient-to-b from-white to-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 shadow-inner ${completedDaysCount >= targetDays ? 'bg-gradient-to-br from-purple-500 to-fuchsia-600' : 'bg-gray-200'}`}>
+                      <Award className="text-white" size={24} />
                     </div>
                     <span className="text-sm font-medium text-gray-700 text-center">Titan</span>
                   </div>
