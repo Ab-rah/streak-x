@@ -81,7 +81,7 @@ export default function StreakX() {
       }
       setActivityForm({ ...existingData });
     } else {
-      setActivityForm({ completed: false, type: 'Workout', subType: 'Running', duration: 30, metricValue: 300, notes: '' });
+      setActivityForm({ completed: false, type: 'Workout', subType: 'Walking', duration: 30, metricValue: 300, steps: 2000, notes: '' });
     }
     setIsModalOpen(true);
   };
@@ -590,8 +590,8 @@ export default function StreakX() {
                           type: newType,
                           // Reset specific fields when switching type to avoid bad data
                           metricValue: newType === 'Workout' ? 300 : undefined,
-                          subType: newType === 'Workout' ? 'Running' : undefined,
-                          steps: newType === 'Workout' && activityForm.subType === 'Walking' ? 2000 : undefined
+                          subType: newType === 'Workout' ? 'Walking' : undefined,
+                          steps: newType === 'Workout' ? 2000 : undefined
                         })
                       }}
                       className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 outline-none transition-all appearance-none"
@@ -612,7 +612,7 @@ export default function StreakX() {
                     <div className="flex-1 animate-fade-in">
                       <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Exercise</label>
                       <select
-                        value={activityForm.subType || 'Running'}
+                        value={activityForm.subType || 'Walking'}
                         onChange={(e) => {
                           const newSubType = e.target.value;
                           setActivityForm({
