@@ -1,17 +1,18 @@
 'use client'
 import { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, ArrowLeft, ArrowRight, Info, Award, User, LogOut, Activity, Clock, Flame, X, Loader2, Target } from 'lucide-react';
+import { Calendar, CheckCircle, ArrowLeft, ArrowRight, Info, Award, User, LogOut, Activity, Clock, Flame, Footprints, X, Loader2, Target } from 'lucide-react';
 
-type WorkoutData = {
+type ActivityData = {
   completed: boolean;
   type?: string;
+  subType?: string; // e.g. "Running", "Coding Language"
   duration?: number;
-  calories?: number;
+  metricValue?: number; // Replaces calories
   notes?: string;
 };
 
 export default function StreakX() {
-  const [days, setDays] = useState<(WorkoutData | null)[]>([]);
+  const [days, setDays] = useState<(ActivityData | null)[]>([]);
   const [currentView, setCurrentView] = useState(0);
   const [targetDays, setTargetDays] = useState(100);
   const [showInfo, setShowInfo] = useState(false);
@@ -20,7 +21,7 @@ export default function StreakX() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
-  const [workoutForm, setWorkoutForm] = useState<WorkoutData>({ completed: false });
+  const [activityForm, setActivityForm] = useState<ActivityData>({ completed: false });
   
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [usernameInput, setUsernameInput] = useState('');
@@ -73,21 +74,25 @@ export default function StreakX() {
     setSelectedDayIndex(index);
     const existingData = days[index];
     if (existingData) {
-      setWorkoutForm({ ...existingData });
+      // Support legacy data
+      if ((existingData as any).calories) {
+        existingData.metricValue = (existingData as any).calories;
+      }
+      setActivityForm({ ...existingData });
     } else {
-      setWorkoutForm({ completed: false, type: 'Running', duration: 30, calories: 300, notes: '' });
+      setActivityForm({ completed: false, type: 'Workout', subType: 'Running', duration: 30, metricValue: 300, notes: '' });
     }
     setIsModalOpen(true);
   };
 
-  const saveWorkout = (e: React.FormEvent) => {
+  const saveActivity = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedDayIndex === null || !currentUser) return;
 
     const newDays = [...days];
     const isNewCompletion = !newDays[selectedDayIndex]?.completed;
     
-    newDays[selectedDayIndex] = { ...workoutForm, completed: true };
+    newDays[selectedDayIndex] = { ...activityForm, completed: true };
     setDays(newDays);
     setIsModalOpen(false);
     
@@ -116,7 +121,7 @@ export default function StreakX() {
     if (isCurrentlyCompleted) {
        newDays[index] = null; // Uncheck
     } else {
-       newDays[index] = { completed: true, type: 'Quick Workout', duration: 15, calories: 100 };
+       newDays[index] = { completed: true, type: 'Quick Session', duration: 15, metricValue: 1 };
        setAnimation('celebration');
        setTimeout(() => setAnimation(''), 3000);
     }
@@ -163,7 +168,9 @@ export default function StreakX() {
     return count;
   };
 
-  const totalCalories = days.reduce((sum, day) => sum + (day?.calories || 0), 0);
+  const totalFocusTime = days.reduce((sum, day) => sum + (day?.type !== 'Workout' ? (day?.duration || 0) : 0), 0);
+  const totalCalories = days.reduce((sum, day) => sum + (day?.type === 'Workout' && day?.subType !== 'Walking' ? (day?.metricValue || (day as any)?.calories || 0) : 0), 0);
+  const totalSteps = days.reduce((sum, day) => sum + (day?.type === 'Workout' && day?.subType === 'Walking' ? (day?.metricValue || 0) : 0), 0);
   const totalDuration = days.reduce((sum, day) => sum + (day?.duration || 0), 0);
   
   const getCalendarDays = () => {
@@ -212,7 +219,7 @@ export default function StreakX() {
              </div>
           </div>
           
-          <h1 className="text-4xl font-bold text-center mb-3 text-white tracking-tight">Strea<span className="text-orange-500">X</span></h1>
+          <h1 className="text-4xl font-bold text-center mb-3 text-white tracking-tight">StreakX</h1>
           <p className="text-zinc-400 text-center mb-10 text-sm">Log in to track your 100-day journey.</p>
           
           <form onSubmit={handleLogin} className="space-y-6">
@@ -249,7 +256,7 @@ export default function StreakX() {
                   max="1000"
                   value={targetDaysInput}
                   onChange={(e) => setTargetDaysInput(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3.5 bg-zinc-950/50 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-zinc-100 placeholder-zinc-700 transition-all outline-none"
+                  className="block w-full pl-11 pr-4 py-3.5 bg-zinc-950/50 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-zinc-100 placeholder-zinc-700 transition-all outline-none"
                   placeholder="100"
                   required
                 />
@@ -259,7 +266,7 @@ export default function StreakX() {
             <button 
               type="submit"
               disabled={isSaving}
-              className="w-full flex justify-center items-center py-4 px-4 rounded-xl text-lg font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:ring-orange-500 transition-all shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.5)] transform hover:-translate-y-1 disabled:opacity-75 disabled:cursor-not-allowed"
+              className="w-full flex justify-center items-center py-4 px-4 rounded-xl text-lg font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:ring-emerald-500 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transform hover:-translate-y-1 disabled:opacity-75 disabled:cursor-not-allowed"
             >
               {isSaving ? <Loader2 size={24} className="animate-spin" /> : "Enter StreaX"}
             </button>
@@ -270,25 +277,25 @@ export default function StreakX() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 relative selection:bg-orange-500/30">
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 relative selection:bg-emerald-500/30">
       {/* Background Ambience */}
-      <div className="fixed top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-orange-600/5 blur-[150px] pointer-events-none z-0"></div>
+      <div className="fixed top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-emerald-600/5 blur-[150px] pointer-events-none z-0"></div>
       <div className="fixed bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-600/5 blur-[150px] pointer-events-none z-0"></div>
 
       {/* Header */}
       <header className="bg-zinc-900/60 backdrop-blur-xl border-b border-zinc-800/60 py-4 px-6 z-30 sticky top-0">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.4)]">
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
               <Calendar className="text-white w-5 h-5" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white hidden sm:block">Strea<span className="text-orange-500">X</span></h1>
+            <h1 className="text-2xl font-bold tracking-tight text-white hidden sm:block">StreakX</h1>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="flex items-center space-x-2 text-sm text-zinc-300 bg-zinc-800/50 px-4 py-2 rounded-full border border-zinc-700/50 backdrop-blur-md">
-               <User size={16} className="text-orange-400" />
+               <User size={16} className="text-emerald-400" />
                <span className="font-semibold">{currentUser}</span>
-               {isSaving && <Loader2 size={12} className="text-orange-400 animate-spin ml-2" />}
+               {isSaving && <Loader2 size={12} className="text-emerald-400 animate-spin ml-2" />}
             </div>
             <button 
               onClick={() => setShowInfo(!showInfo)}
@@ -316,7 +323,7 @@ export default function StreakX() {
             <div className="bg-zinc-900/80 backdrop-blur-lg border border-indigo-500/30 rounded-2xl p-6 animate-fade-in shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
               <h2 className="text-xl font-bold mb-2 text-white flex items-center"><Info className="mr-2 text-indigo-400" size={20}/> Welcome to StreaX!</h2>
-              <p className="text-zinc-400 mb-4 leading-relaxed">Track your consistency challenge day by day. Click on a tile to log a workout. Turn the grid orange to reach your goal.</p>
+              <p className="text-zinc-400 mb-4 leading-relaxed">Track your habits and consistency day by day. Click on a tile to log your activity—whether it's reading, coding, meditation, or working out.</p>
               <button 
                 onClick={() => setShowInfo(false)} 
                 className="bg-zinc-800 hover:bg-zinc-700 text-white px-5 py-2 rounded-lg font-medium transition-colors text-sm border border-zinc-700"
@@ -328,14 +335,14 @@ export default function StreakX() {
 
           {/* Stats section */}
           <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-3xl p-6 sm:p-8 shadow-2xl">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6">
               
               <div className="flex flex-col items-center sm:items-start justify-center p-5 bg-zinc-950/50 rounded-2xl border border-zinc-800/80 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all" />
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center"><Activity size={14} className="mr-1.5 text-indigo-400"/> Streak</p>
                 <div className="flex items-end space-x-1">
-                  <p className="text-4xl sm:text-5xl font-bold text-white">{currentStreak()}</p>
-                  <p className="text-zinc-500 font-medium pb-1">days</p>
+                  <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight">{currentStreak()}</p>
+                  <p className="text-zinc-500 font-medium pb-1 text-sm">days</p>
                 </div>
               </div>
               
@@ -343,30 +350,39 @@ export default function StreakX() {
                 <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center"><CheckCircle size={14} className="mr-1.5 text-emerald-400"/> Progress</p>
                 <div className="flex items-baseline space-x-1">
-                   <p className="text-4xl sm:text-5xl font-bold text-white">{completedDaysCount}</p>
-                   <p className="text-lg font-semibold text-zinc-600">/ {targetDays}</p>
+                   <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight">{completedDaysCount}</p>
+                   <p className="text-sm font-semibold text-zinc-600">/ {targetDays}</p>
                 </div>
+              </div>
+
+              <div className="flex flex-col items-center sm:items-start justify-center p-5 bg-zinc-950/50 rounded-2xl border border-zinc-800/80 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all" />
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center"><Clock size={14} className="mr-1.5 text-cyan-400"/> Focus Time</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1">
+                   {totalFocusTime > 600 
+                      ? `${Math.floor(totalFocusTime/60)}h` 
+                      : totalFocusTime > 60 
+                        ? `${Math.floor(totalFocusTime/60)}h ${totalFocusTime%60}` 
+                        : `${totalFocusTime}m`}
+                </p>
               </div>
               
               <div className="flex flex-col items-center sm:items-start justify-center p-5 bg-zinc-950/50 rounded-2xl border border-zinc-800/80 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl group-hover:bg-orange-500/20 transition-all" />
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center"><Flame size={14} className="mr-1.5 text-orange-400"/> Calories</p>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center"><Flame size={14} className="mr-1.5 text-orange-400"/> Calories Burned</p>
                 <div className="flex items-end space-x-1">
-                  <p className="text-4xl sm:text-5xl font-bold text-white tracking-tight">{totalCalories > 9999 ? (totalCalories/1000).toFixed(1) + 'k' : totalCalories}</p>
-                  <p className="text-zinc-500 font-medium pb-1">kcal</p>
+                  <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight">{totalCalories > 9999 ? (totalCalories/1000).toFixed(1) + 'k' : totalCalories}</p>
+                  <p className="text-zinc-500 font-medium pb-1 text-sm">kcal</p>
                 </div>
               </div>
               
-              <div className="flex flex-col items-center sm:items-start justify-center p-5 bg-zinc-950/50 rounded-2xl border border-zinc-800/80 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all" />
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center"><Clock size={14} className="mr-1.5 text-cyan-400"/> Time</p>
-                <p className="text-3xl sm:text-4xl font-bold text-white mt-1">
-                   {totalDuration > 600 
-                      ? `${Math.floor(totalDuration/60)}h` 
-                      : totalDuration > 60 
-                        ? `${Math.floor(totalDuration/60)}h ${totalDuration%60}` 
-                        : `${totalDuration}m`}
-                </p>
+              <div className="flex flex-col items-center sm:items-start justify-center p-5 bg-zinc-950/50 rounded-2xl border border-zinc-800/80 relative overflow-hidden group col-span-2 sm:col-span-1 md:col-span-1">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/10 rounded-full blur-2xl group-hover:bg-teal-500/20 transition-all" />
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center"><Footprints size={14} className="mr-1.5 text-teal-400"/> Steps</p>
+                <div className="flex items-end space-x-1">
+                  <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight">{totalSteps > 9999 ? (totalSteps/1000).toFixed(1) + 'k' : totalSteps}</p>
+                  <p className="text-zinc-500 font-medium pb-1 text-sm">steps</p>
+                </div>
               </div>
             </div>
             
@@ -439,7 +455,7 @@ export default function StreakX() {
                     
                     {day.completed && days[day.index] && (
                        <div className="text-[10px] sm:text-xs font-semibold text-orange-100 opacity-90 mt-0.5 sm:mt-1 truncate w-full px-1 text-center">
-                         {days[day.index]?.calories ? `${days[day.index]?.calories} kcal` : ''}
+                         {days[day.index]?.metricValue ? `${days[day.index]?.metricValue} pts` : days[day.index]?.type}
                        </div>
                     )}
 
@@ -491,7 +507,7 @@ export default function StreakX() {
                     <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(249,115,22,0.4)] bg-gradient-to-br from-orange-400 to-red-600`}>
                       <Flame className="text-white" size={24} />
                     </div>
-                    <span className="text-sm font-semibold text-zinc-300 text-center">5k Furnace</span>
+                    <span className="text-sm font-semibold text-zinc-300 text-center">5k Points</span>
                   </div>
                 )}
                 
@@ -522,19 +538,19 @@ export default function StreakX() {
       {isModalOpen && selectedDayIndex !== null && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden transform transition-all relative">
-            <div className={`absolute top-0 left-0 w-full h-1 ${workoutForm.completed && days[selectedDayIndex]?.completed ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-gradient-to-r from-orange-500 to-red-500'}`}></div>
+            <div className={`absolute top-0 left-0 w-full h-1 ${activityForm.completed && days[selectedDayIndex]?.completed ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-gradient-to-r from-orange-500 to-red-500'}`}></div>
             
             <div className="px-6 py-5 flex justify-between items-center border-b border-zinc-800/80">
               <h3 className="font-bold text-xl flex items-center text-white">
-                <Activity className={`mr-2 h-6 w-6 ${workoutForm.completed && days[selectedDayIndex]?.completed ? 'text-emerald-400' : 'text-orange-500'}`} />
-                {workoutForm.completed && days[selectedDayIndex]?.completed ? 'Edit Session' : 'Log Session'}
+                <Activity className={`mr-2 h-6 w-6 ${activityForm.completed && days[selectedDayIndex]?.completed ? 'text-emerald-400' : 'text-orange-500'}`} />
+                {activityForm.completed && days[selectedDayIndex]?.completed ? 'Edit Session' : 'Log Session'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors bg-zinc-800/50 hover:bg-zinc-700 p-1.5 rounded-full">
                 <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={saveWorkout} className="p-6 space-y-6">
+            <form onSubmit={saveActivity} className="p-6 space-y-6">
               <div className="flex items-center space-x-4 p-4 bg-zinc-950/50 rounded-2xl border border-zinc-800">
                  <div className="w-14 h-14 bg-zinc-800 text-white rounded-xl flex items-center justify-center font-bold text-2xl border border-zinc-700">
                     {selectedDayIndex + 1}
@@ -548,24 +564,56 @@ export default function StreakX() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Activity Type</label>
-                  <select 
-                    value={workoutForm.type || 'Running'}
-                    onChange={(e) => setWorkoutForm({...workoutForm, type: e.target.value})}
-                    className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 outline-none transition-all appearance-none"
-                  >
-                    <option value="Running">🏃‍♂️ Running</option>
-                    <option value="Cycling">🚴‍♂️ Cycling</option>
-                    <option value="Swimming">🏊‍♂️ Swimming</option>
-                    <option value="Weightlifting">🏋️‍♂️ Weightlifting</option>
-                    <option value="Yoga">🧘‍♀️ Yoga</option>
-                    <option value="HIIT">⏱️ HIIT</option>
-                    <option value="Rest Day">🛋️ Active Rest Day</option>
-                  </select>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Activity Type</label>
+                    <select 
+                      value={activityForm.type || 'Workout'}
+                      onChange={(e) => {
+                         const newType = e.target.value;
+                         setActivityForm({
+                           ...activityForm, 
+                           type: newType,
+                           // Reset specific fields when switching type to avoid bad data
+                           metricValue: newType === 'Workout' ? 300 : undefined,
+                           subType: newType === 'Workout' ? 'Running' : undefined
+                         })
+                      }}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 outline-none transition-all appearance-none"
+                    >
+                      <option value="Workout">🏋️‍♂️ Workout / Exercise</option>
+                      <option value="Reading">📚 Reading</option>
+                      <option value="Meditation">🧘‍♀️ Meditation</option>
+                      <option value="Coding">💻 Coding / Building</option>
+                      <option value="Learning">🧠 Learning / Study</option>
+                      <option value="Creative">🎨 Creative Work</option>
+                      <option value="Hydration">💧 Hydration</option>
+                      <option value="Chores">🧹 Chores / Cleaning</option>
+                      <option value="Custom">🚀 Custom Activity</option>
+                    </select>
+                  </div>
+
+                  {activityForm.type === 'Workout' && (
+                    <div className="flex-1 animate-fade-in">
+                      <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Exercise</label>
+                      <select 
+                        value={activityForm.subType || 'Running'}
+                        onChange={(e) => setActivityForm({...activityForm, subType: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 outline-none transition-all appearance-none"
+                      >
+                        <option value="Running">Running</option>
+                        <option value="Cycling">Cycling</option>
+                        <option value="Swimming">Swimming</option>
+                        <option value="Weightlifting">Weightlifting</option>
+                        <option value="Yoga">Yoga</option>
+                        <option value="HIIT">HIIT</option>
+                        <option value="Walking">Walking</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${activityForm.type === 'Workout' ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <div>
                     <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Duration</label>
                     <div className="relative">
@@ -575,36 +623,41 @@ export default function StreakX() {
                       <input 
                         type="number" 
                         min="0"
-                        value={workoutForm.duration || ''}
-                        onChange={(e) => setWorkoutForm({...workoutForm, duration: parseInt(e.target.value) || 0})}
+                        value={activityForm.duration || ''}
+                        onChange={(e) => setActivityForm({...activityForm, duration: parseInt(e.target.value) || 0})}
                         className="w-full pl-10 pr-3 border border-zinc-800 rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 bg-zinc-950 text-white outline-none transition-all placeholder-zinc-700"
                         placeholder="Mins"
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Burn</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-orange-500">
-                        <Flame size={16} />
+                  
+                  {activityForm.type === 'Workout' && (
+                    <div className="animate-fade-in">
+                      <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">
+                        {activityForm.subType === 'Walking' ? 'Steps' : 'Calories Burned'}
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-orange-500">
+                          {activityForm.subType === 'Walking' ? <Footprints size={16} /> : <Flame size={16} />}
+                        </div>
+                        <input 
+                          type="number" 
+                          min="0"
+                          value={activityForm.metricValue || ''}
+                          onChange={(e) => setActivityForm({...activityForm, metricValue: parseInt(e.target.value) || 0})}
+                          className="w-full pl-10 pr-3 border border-zinc-800 rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 bg-zinc-950 text-white outline-none transition-all placeholder-zinc-700"
+                          placeholder={activityForm.subType === 'Walking' ? 'Steps' : 'Kcal'}
+                        />
                       </div>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={workoutForm.calories || ''}
-                        onChange={(e) => setWorkoutForm({...workoutForm, calories: parseInt(e.target.value) || 0})}
-                        className="w-full pl-10 pr-3 border border-zinc-800 rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 bg-zinc-950 text-white outline-none transition-all placeholder-zinc-700"
-                        placeholder="Kcal"
-                      />
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-1.5">Notes</label>
                   <textarea 
-                    value={workoutForm.notes || ''}
-                    onChange={(e) => setWorkoutForm({...workoutForm, notes: e.target.value})}
+                    value={activityForm.notes || ''}
+                    onChange={(e) => setActivityForm({...activityForm, notes: e.target.value})}
                     className="w-full border border-zinc-800 rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 p-3 bg-zinc-950 text-white outline-none transition-all resize-none placeholder-zinc-700"
                     placeholder="Capture your thoughts..."
                     rows={3}
@@ -615,9 +668,9 @@ export default function StreakX() {
               <div className="pt-2 flex flex-col sm:flex-row gap-3">
                 <button 
                   type="submit"
-                  className={`flex-1 text-white py-3.5 px-4 rounded-xl font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] hover:shadow-[0_0_25px_rgba(234,88,12,0.5)] transform transition-all hover:-translate-y-1 ${workoutForm.completed && days[selectedDayIndex]?.completed ? 'bg-gradient-to-r from-emerald-500 to-teal-600 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-orange-500 to-red-600'}`}
+                  className={`flex-1 text-white py-3.5 px-4 rounded-xl font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] hover:shadow-[0_0_25px_rgba(234,88,12,0.5)] transform transition-all hover:-translate-y-1 ${activityForm.completed && days[selectedDayIndex]?.completed ? 'bg-gradient-to-r from-emerald-500 to-teal-600 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)]' : 'bg-gradient-to-r from-orange-500 to-red-600'}`}
                 >
-                  {workoutForm.completed && days[selectedDayIndex]?.completed ? 'Update Session' : 'Commit to Log'}
+                  {activityForm.completed && days[selectedDayIndex]?.completed ? 'Update Session' : 'Commit to Log'}
                 </button>
                 {days[selectedDayIndex]?.completed && (
                   <button 
